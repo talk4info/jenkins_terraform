@@ -1,21 +1,28 @@
-#data "aws_ami" "ubuntu" {
-  #most_recent = true
+# Get latest AMI ID for Amazon Linux2 OS
+data "aws_ami" "amzlinux2" {
+  most_recent = true
+  owners = [ "amazon" ]
+  filter {
+    name = "name"
+    values = [ "amzn2-ami-hvm-*-gp2" ]
+  }
+  filter {
+    name = "root-device-type"
+    values = [ "ebs" ]
+  }
+  filter {
+    name = "virtualization-type"
+    values = [ "hvm" ]
+  }
+  filter {
+    name = "architecture"
+    values = [ "x86_64" ]
+  }
+}
 
-  #filter {
-  #  name   = "name"
-  #  values = ["ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*"]
- # }
-
- # filter {
-  #  name   = "virtualization-type"
-  #  values = ["hvm"]
-  #}
-
- # owners = ["626551033954"] # Canonical
-#}
 
 resource "aws_instance" "jenkins-instance" {
-  ami           = "ami-0194c3e07668a7e36"
+  ami           = data.aws_ami.amzlinux2.image_id
   instance_type = "t2.micro"
 
   # the VPC subnet
@@ -31,7 +38,7 @@ resource "aws_instance" "jenkins-instance" {
   user_data = data.template_cloudinit_config.cloudinit-jenkins.rendered
 
   # iam instance profile
-  iam_instance_profile = aws_iam_instance_profile.jenkins-role.name
+  iam_instance_profile = aws_iam_instance_profile.mytest-role.name
 }
 
 resource "aws_ebs_volume" "jenkins-data" {
@@ -49,19 +56,3 @@ resource "aws_volume_attachment" "jenkins-data-attachment" {
   instance_id  = aws_instance.jenkins-instance.id
   skip_destroy = true
 }
-
-resource "aws_instance" "app-instance" {
-  count         = var.APP_INSTANCE_COUNT
-  ami           = var.APP_INSTANCE_AMI
-  instance_type = "t2.micro"
-
-  # the VPC subnet
-  subnet_id = aws_subnet.main-public-1.id
-
-  # the security group
-  vpc_security_group_ids = [aws_security_group.app-securitygroup.id]
-
-  # the public SSH key
-  key_name = aws_key_pair.mykeypair.key_name
-}
-
